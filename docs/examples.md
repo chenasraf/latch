@@ -69,26 +69,29 @@ class SeoPlugin
 {
     public function __construct(HookRegistry $registry)
     {
-        $registry->hook('cms', 'head-tags')
+        // Register a named handler - all hooks auto-tagged with 'handler:seo'
+        $seo = $registry->registerHandler('seo');
+
+        $seo->hook('cms', 'head-tags')
             ->priority(1)
             ->handle(fn (PageContext $ctx) => [
                 "<meta name=\"description\" content=\"{$ctx->page->excerpt}\">",
                 "<meta property=\"og:title\" content=\"{$ctx->page->title}\">",
             ]);
 
-        $registry->hook('cms', 'page-title')
+        $seo->hook('cms', 'page-title')
             ->priority(50)
             ->handle(fn (TitlePayload $t) => $t->withValue(
                 $t->value . ' | My Site'
             ));
 
-        $registry->hook('cms', 'render-html')
+        $seo->hook('cms', 'render-html')
             ->priority(90)
             ->handle(fn (RenderPayload $p) => $p->withHtml(
                 $p->html . $this->jsonLdScript($p)
             ));
 
-        $registry->hook('cms', 'page-published')
+        $seo->hook('cms', 'page-published')
             ->handle(fn (PageEvent $e) => SitemapQueue::push($e->page->url));
     }
 
@@ -116,16 +119,20 @@ When multiple handlers are registered for the same point, the source can use tag
 invoke specific ones. Pass a list of tags to `apply()`, `dispatch()`, or `collect()` and only
 handlers with at least one matching tag will run.
 
+Using `registerHandler()`, each plugin gets auto-tagged with `handler:{name}`, making targeted
+invocation straightforward.
+
 ```php
-// An SEO plugin and an analytics plugin both hook into head-tags
-$registry->hook('cms', 'head-tags')
-    ->tag('seo')
+// SEO plugin registers with a named handler
+$seo = $registry->registerHandler('seo');
+$seo->hook('cms', 'head-tags')
     ->handle(fn (PageContext $ctx) => [
         "<meta name=\"description\" content=\"{$ctx->page->excerpt}\">",
     ]);
 
-$registry->hook('cms', 'head-tags')
-    ->tag('analytics')
+// Analytics plugin registers with its own named handler
+$analytics = $registry->registerHandler('analytics');
+$analytics->hook('cms', 'head-tags')
     ->handle(fn (PageContext $ctx) => [
         '<script src="/analytics.js"></script>',
     ]);
@@ -133,8 +140,8 @@ $registry->hook('cms', 'head-tags')
 // Collect from all handlers (default)
 $allTags = $registry->collect('cms', 'head-tags', $context);
 
-// Collect only from SEO handlers
-$seoTags = $registry->collect('cms', 'head-tags', $context, ['seo']);
+// Collect only from the SEO handler
+$seoTags = $registry->collect('cms', 'head-tags', $context, ['handler:seo']);
 ```
 
 ### Discovery-based approach
@@ -148,15 +155,26 @@ $registry->source('cms')
     ->collect('notification-providers', stdClass::class)
     ->action('notify-subscribers', NotifyPayload::class);
 
-$providers = $registry->collect('cms', 'notification-providers');
-// Returns: [['id' => 'email', 'label' => 'Email'], ['id' => 'push', 'label' => 'Push Notifications']]
+// Each plugin registers as a provider
+$email = $registry->registerHandler('email');
+$email->hook('cms', 'notification-providers')
+    ->handle(fn () => [['id' => 'email', 'label' => 'Email']]);
+$email->hook('cms', 'notify-subscribers')
+    ->handle(fn (NotifyPayload $p) => EmailService::send($p));
+
+$push = $registry->registerHandler('push');
+$push->hook('cms', 'notification-providers')
+    ->handle(fn () => [['id' => 'push', 'label' => 'Push Notifications']]);
+$push->hook('cms', 'notify-subscribers')
+    ->handle(fn (NotifyPayload $p) => PushService::send($p));
 
 // Step 2: Show a picker in the UI and get the user's choice
+$providers = $registry->collect('cms', 'notification-providers');
 $chosen = $userChoice; // e.g. 'email'
 
-// Step 3: Dispatch to the chosen provider using tag filtering
+// Step 3: Dispatch to the chosen provider using its auto-tag
 $registry->dispatch(
-    'cms', 'notify-subscribers', $payload, [$chosen]
+    'cms', 'notify-subscribers', $payload, ["handler:{$chosen}"]
 );
 ```
 

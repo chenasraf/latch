@@ -214,6 +214,66 @@ If no tags are passed (the default), all handlers run as usual. This is useful w
 wants to target a specific handler - for example, letting the user choose which app handles a
 particular action.
 
+### Registered handlers
+
+Use `registerHandler()` to create a named handler scope. All hooks created through it are
+automatically tagged with `handler:{name}`, plus any additional tags you provide. This is useful
+when one package registers multiple hooks and you want them all identifiable and filterable as a
+group.
+
+```php
+$seo = $registry->registerHandler('seo');
+
+$seo->hook('cms', 'head-tags')
+    ->handle(fn (PageContext $ctx) => [
+        "<meta name=\"description\" content=\"{$ctx->page->excerpt}\">",
+    ]);
+
+$seo->hook('cms', 'render-html')
+    ->priority(90)
+    ->handle(fn (RenderPayload $p) => $p->withHtml(
+        $p->html . '<script type="application/ld+json">{}</script>'
+    ));
+
+// Both handlers are tagged 'handler:seo'
+```
+
+You can pass additional tags at registration time:
+
+```php
+$seo = $registry->registerHandler('seo', ['premium']);
+// All hooks get both 'handler:seo' and 'premium'
+```
+
+Or add more tags later with `globalTags()` - these apply to all hooks created after the call:
+
+```php
+$seo = $registry->registerHandler('seo');
+
+$seo->hook('cms', 'head-tags')->handle(...);
+// Tagged: ['handler:seo']
+
+$seo->globalTags('v2');
+
+$seo->hook('cms', 'render-html')->handle(...);
+// Tagged: ['handler:seo', 'v2']
+```
+
+Per-hook tags still work and are merged with the auto-tags:
+
+```php
+$seo->hook('cms', 'page-published')
+    ->tag('sitemap')
+    ->handle(...);
+// Tagged: ['handler:seo', 'sitemap']
+```
+
+The source can then target a specific handler by its auto-tag:
+
+```php
+$registry->dispatch('cms', 'page-published', $event, ['handler:seo']);
+```
+
 ### Full handler example
 
 ```php

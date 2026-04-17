@@ -7,6 +7,7 @@ namespace Latch\Contracts;
 use Latch\Builders\HandlerBuilder;
 use Latch\Builders\SourceBuilder;
 use Latch\HookSource;
+use Latch\RegisteredHandler;
 
 interface HookRegistryInterface
 {
@@ -21,6 +22,14 @@ interface HookRegistryInterface
      * Attach a handler to a hook point.
      */
     public function hook(string $sourceId, string $point): HandlerBuilder;
+
+    /**
+     * Register a named handler scope. All hooks created through it are auto-tagged
+     * with handler:{name} and any additional tags.
+     *
+     * @param  list<string>  $tags  Additional tags applied to all hooks from this handler
+     */
+    public function registerHandler(string $name, array $tags = []): RegisteredHandler;
 
     /**
      * Apply a filter chain — each handler receives and returns a modified payload.

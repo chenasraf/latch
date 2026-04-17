@@ -23,6 +23,11 @@ final class HookRegistry implements HookRegistryInterface
         return new SourceBuilder($source);
     }
 
+    public function registerHandler(string $name, array $tags = []): RegisteredHandler
+    {
+        return new RegisteredHandler($this, $name, $tags);
+    }
+
     public function hook(string $sourceId, string $point): HandlerBuilder
     {
         $source = $this->resolveSource($sourceId);

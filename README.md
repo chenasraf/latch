@@ -61,6 +61,20 @@ $registry->hook('source', 'point')
     ->handle(fn ($p) => ...);
 ```
 
+## Registered Handlers
+
+Create a named handler scope to auto-tag all hooks from a package:
+
+```php
+$seo = $registry->registerHandler('seo');
+
+$seo->hook('cms', 'head-tags')->handle(...);   // auto-tagged 'handler:seo'
+$seo->hook('cms', 'render-html')->handle(...); // auto-tagged 'handler:seo'
+
+// Source can target a specific handler
+$registry->dispatch('cms', 'page-published', $event, ['handler:seo']);
+```
+
 ## Existence Checks
 
 ```php

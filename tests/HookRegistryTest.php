@@ -367,6 +367,90 @@ it('runs all handlers when no tag filter is given', function () {
     expect($calls)->toBe(['pantry', 'other']);
 });
 
+// --- Registered Handlers ---
+
+it('auto-tags hooks with handler name', function () {
+    $this->registry->source('app')->action('event', stdClass::class);
+
+    $handler = $this->registry->registerHandler('seo');
+    $hookHandler = $handler->hook('app', 'event')
+        ->handle(fn () => null);
+
+    expect($hookHandler->tags)->toBe(['handler:seo']);
+});
+
+it('auto-tags hooks with handler name and additional tags', function () {
+    $this->registry->source('app')->action('event', stdClass::class);
+
+    $handler = $this->registry->registerHandler('seo', ['premium']);
+    $hookHandler = $handler->hook('app', 'event')
+        ->handle(fn () => null);
+
+    expect($hookHandler->tags)->toBe(['handler:seo', 'premium']);
+});
+
+it('applies auto-tags to all hooks from a registered handler', function () {
+    $this->registry->source('app')
+        ->action('event-a', stdClass::class)
+        ->action('event-b', stdClass::class);
+
+    $handler = $this->registry->registerHandler('analytics', ['tracking']);
+
+    $a = $handler->hook('app', 'event-a')->handle(fn () => null);
+    $b = $handler->hook('app', 'event-b')->handle(fn () => null);
+
+    expect($a->tags)->toBe(['handler:analytics', 'tracking']);
+    expect($b->tags)->toBe(['handler:analytics', 'tracking']);
+});
+
+it('merges auto-tags with per-hook tags', function () {
+    $this->registry->source('app')->action('event', stdClass::class);
+
+    $handler = $this->registry->registerHandler('seo');
+    $hookHandler = $handler->hook('app', 'event')
+        ->tag('extra')
+        ->handle(fn () => null);
+
+    expect($hookHandler->tags)->toBe(['handler:seo', 'extra']);
+});
+
+it('adds global tags after construction', function () {
+    $this->registry->source('app')
+        ->action('event-a', stdClass::class)
+        ->action('event-b', stdClass::class);
+
+    $handler = $this->registry->registerHandler('seo');
+    $a = $handler->hook('app', 'event-a')->handle(fn () => null);
+
+    $handler->globalTags('premium', 'v2');
+    $b = $handler->hook('app', 'event-b')->handle(fn () => null);
+
+    expect($a->tags)->toBe(['handler:seo']);
+    expect($b->tags)->toBe(['handler:seo', 'premium', 'v2']);
+});
+
+it('filters by handler auto-tag', function () {
+    $this->registry->source('app')->action('event', stdClass::class);
+
+    $calls = [];
+
+    $seo = $this->registry->registerHandler('seo');
+    $seo->hook('app', 'event')
+        ->handle(function () use (&$calls) {
+            $calls[] = 'seo';
+        });
+
+    $analytics = $this->registry->registerHandler('analytics');
+    $analytics->hook('app', 'event')
+        ->handle(function () use (&$calls) {
+            $calls[] = 'analytics';
+        });
+
+    $this->registry->dispatch('app', 'event', new stdClass, ['handler:seo']);
+
+    expect($calls)->toBe(['seo']);
+});
+
 // --- Introspection ---
 
 it('lists all sources', function () {
