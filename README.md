@@ -6,7 +6,7 @@ queries the registry at runtime to collect, transform, or broadcast through thos
 
 ## Requirements
 
-- PHP ^8.1
+- PHP ^8.2
 
 ## Installation
 
@@ -57,7 +57,7 @@ $registry->hook('source', 'point')
     ->priority(5)           // Lower runs first (default: 10)
     ->exclusive()           // Short-circuits remaining handlers after this one
     ->when(fn ($p) => ...)  // Skip handler if condition returns false
-    ->tag('admin', 'ui')   // Arbitrary tags for introspection
+    ->tag('admin', 'ui')   // Tags for introspection and filtering
     ->handle(fn ($p) => ...);
 ```
 

@@ -186,7 +186,7 @@ $registry->hook('cms', 'render-html')
 
 ### Tags
 
-Tags are arbitrary strings for introspection and filtering. They don't affect execution.
+Tags are arbitrary strings you can attach to handlers for introspection and filtering.
 
 ```php
 $registry->hook('cms', 'admin-menu')
@@ -195,6 +195,24 @@ $registry->hook('cms', 'admin-menu')
         new MenuItem('Analytics Dashboard', '/analytics'),
     ]);
 ```
+
+### Tag filtering
+
+When invoking a hook, the source can pass a list of tags to only run matching handlers. A handler
+matches if it has at least one of the requested tags.
+
+```php
+// Only run handlers tagged 'analytics'
+$items = $registry->collect('cms', 'admin-menu', $context, ['analytics']);
+
+// Same for filters and actions
+$payload = $registry->apply('cms', 'render-html', $payload, ['premium']);
+$registry->dispatch('cms', 'page-published', $event, ['seo']);
+```
+
+If no tags are passed (the default), all handlers run as usual. This is useful when the source
+wants to target a specific handler - for example, letting the user choose which app handles a
+particular action.
 
 ### Full handler example
 

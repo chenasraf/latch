@@ -65,11 +65,19 @@ final class HookSource
     /**
      * Get handlers for a point, sorted by priority (lower first).
      *
+     * @param  list<string>  $tags  When non-empty, only handlers with at least one matching tag are returned
      * @return list<HookHandler>
      */
-    public function getHandlers(string $point): array
+    public function getHandlers(string $point, array $tags = []): array
     {
         $handlers = $this->handlers[$point] ?? [];
+
+        if ($tags !== []) {
+            $handlers = array_values(array_filter(
+                $handlers,
+                fn (HookHandler $h) => array_intersect($h->tags, $tags) !== [],
+            ));
+        }
 
         usort($handlers, fn (HookHandler $a, HookHandler $b) => $a->priority <=> $b->priority);
 

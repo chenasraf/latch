@@ -110,6 +110,56 @@ $seo = new SeoPlugin($registry);
 echo $cms->renderPage($page);
 ```
 
+## Tag Filtering: Targeted Invocation
+
+When multiple handlers are registered for the same point, the source can use tag filtering to only
+invoke specific ones. Pass a list of tags to `apply()`, `dispatch()`, or `collect()` and only
+handlers with at least one matching tag will run.
+
+```php
+// An SEO plugin and an analytics plugin both hook into head-tags
+$registry->hook('cms', 'head-tags')
+    ->tag('seo')
+    ->handle(fn (PageContext $ctx) => [
+        "<meta name=\"description\" content=\"{$ctx->page->excerpt}\">",
+    ]);
+
+$registry->hook('cms', 'head-tags')
+    ->tag('analytics')
+    ->handle(fn (PageContext $ctx) => [
+        '<script src="/analytics.js"></script>',
+    ]);
+
+// Collect from all handlers (default)
+$allTags = $registry->collect('cms', 'head-tags', $context);
+
+// Collect only from SEO handlers
+$seoTags = $registry->collect('cms', 'head-tags', $context, ['seo']);
+```
+
+### Discovery-based approach
+
+Instead of relying on tags alone, the source can first discover which handlers are available, show
+the user a picker, and then target the chosen one.
+
+```php
+// Step 1: Discover available notification providers
+$registry->source('cms')
+    ->collect('notification-providers', stdClass::class)
+    ->action('notify-subscribers', NotifyPayload::class);
+
+$providers = $registry->collect('cms', 'notification-providers');
+// Returns: [['id' => 'email', 'label' => 'Email'], ['id' => 'push', 'label' => 'Push Notifications']]
+
+// Step 2: Show a picker in the UI and get the user's choice
+$chosen = $userChoice; // e.g. 'email'
+
+// Step 3: Dispatch to the chosen provider using tag filtering
+$registry->dispatch(
+    'cms', 'notify-subscribers', $payload, [$chosen]
+);
+```
+
 ## Laravel Integration
 
 The service provider is auto-discovered. Inject `HookRegistryInterface` anywhere Laravel resolves

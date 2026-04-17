@@ -289,6 +289,84 @@ it('stores tags on handlers', function () {
     expect($handler->tags)->toBe(['admin', 'ui']);
 });
 
+// --- Tag Filtering ---
+
+it('filters action handlers by tag', function () {
+    $this->registry->source('app')->action('event', stdClass::class);
+
+    $calls = [];
+
+    $this->registry->hook('app', 'event')
+        ->tag('pantry')
+        ->handle(function () use (&$calls) {
+            $calls[] = 'pantry';
+        });
+
+    $this->registry->hook('app', 'event')
+        ->tag('shopping-list')
+        ->handle(function () use (&$calls) {
+            $calls[] = 'shopping-list';
+        });
+
+    $this->registry->dispatch('app', 'event', new stdClass, ['pantry']);
+
+    expect($calls)->toBe(['pantry']);
+});
+
+it('filters filter handlers by tag', function () {
+    $this->registry->source('app')->filter('transform', stdClass::class);
+
+    $this->registry->hook('app', 'transform')
+        ->tag('pantry')
+        ->handle(fn (stdClass $p) => (object) ['value' => $p->value.'-pantry']);
+
+    $this->registry->hook('app', 'transform')
+        ->tag('other')
+        ->handle(fn (stdClass $p) => (object) ['value' => $p->value.'-other']);
+
+    $result = $this->registry->apply('app', 'transform', (object) ['value' => 'start'], ['pantry']);
+
+    expect($result->value)->toBe('start-pantry');
+});
+
+it('filters collect handlers by tag', function () {
+    $this->registry->source('app')->collect('items', stdClass::class);
+
+    $this->registry->hook('app', 'items')
+        ->tag('pantry')
+        ->handle(fn () => ['eggs', 'milk']);
+
+    $this->registry->hook('app', 'items')
+        ->tag('other')
+        ->handle(fn () => ['nope']);
+
+    $result = $this->registry->collect('app', 'items', null, ['pantry']);
+
+    expect($result)->toBe(['eggs', 'milk']);
+});
+
+it('runs all handlers when no tag filter is given', function () {
+    $this->registry->source('app')->action('event', stdClass::class);
+
+    $calls = [];
+
+    $this->registry->hook('app', 'event')
+        ->tag('pantry')
+        ->handle(function () use (&$calls) {
+            $calls[] = 'pantry';
+        });
+
+    $this->registry->hook('app', 'event')
+        ->tag('other')
+        ->handle(function () use (&$calls) {
+            $calls[] = 'other';
+        });
+
+    $this->registry->dispatch('app', 'event', new stdClass);
+
+    expect($calls)->toBe(['pantry', 'other']);
+});
+
 // --- Introspection ---
 
 it('lists all sources', function () {

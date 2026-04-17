@@ -24,20 +24,25 @@ interface HookRegistryInterface
 
     /**
      * Apply a filter chain — each handler receives and returns a modified payload.
+     *
+     * @param  list<string>  $tags  When non-empty, only handlers with at least one matching tag are invoked
      */
-    public function apply(string $sourceId, string $point, object $payload): object;
+    public function apply(string $sourceId, string $point, object $payload, array $tags = []): object;
 
     /**
      * Dispatch an action — fire-and-forget, return value is ignored.
+     *
+     * @param  list<string>  $tags  When non-empty, only handlers with at least one matching tag are invoked
      */
-    public function dispatch(string $sourceId, string $point, object $payload): void;
+    public function dispatch(string $sourceId, string $point, object $payload, array $tags = []): void;
 
     /**
      * Collect contributions — each handler returns an array, results are merged flat.
      *
+     * @param  list<string>  $tags  When non-empty, only handlers with at least one matching tag are invoked
      * @return list<mixed>
      */
-    public function collect(string $sourceId, string $point, ?object $context = null): array;
+    public function collect(string $sourceId, string $point, ?object $context = null, array $tags = []): array;
 
     /**
      * Check whether a source is registered.

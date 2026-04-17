@@ -33,7 +33,7 @@ final class HookRegistry implements HookRegistryInterface
         return new HandlerBuilder($source, $point);
     }
 
-    public function apply(string $sourceId, string $point, object $payload): object
+    public function apply(string $sourceId, string $point, object $payload, array $tags = []): object
     {
         $source = $this->resolveSource($sourceId);
         $hookPoint = $source->getPoint($point);
@@ -42,7 +42,7 @@ final class HookRegistry implements HookRegistryInterface
             throw new HookTypeMismatchException($sourceId, $point, $hookPoint->type, HookType::Filter);
         }
 
-        $handlers = $source->getHandlers($point);
+        $handlers = $source->getHandlers($point, $tags);
 
         foreach ($handlers as $handler) {
             if (! $handler->shouldRun($payload)) {
@@ -59,7 +59,7 @@ final class HookRegistry implements HookRegistryInterface
         return $payload;
     }
 
-    public function dispatch(string $sourceId, string $point, object $payload): void
+    public function dispatch(string $sourceId, string $point, object $payload, array $tags = []): void
     {
         $source = $this->resolveSource($sourceId);
         $hookPoint = $source->getPoint($point);
@@ -68,7 +68,7 @@ final class HookRegistry implements HookRegistryInterface
             throw new HookTypeMismatchException($sourceId, $point, $hookPoint->type, HookType::Action);
         }
 
-        $handlers = $source->getHandlers($point);
+        $handlers = $source->getHandlers($point, $tags);
 
         foreach ($handlers as $handler) {
             if (! $handler->shouldRun($payload)) {
@@ -83,7 +83,7 @@ final class HookRegistry implements HookRegistryInterface
         }
     }
 
-    public function collect(string $sourceId, string $point, ?object $context = null): array
+    public function collect(string $sourceId, string $point, ?object $context = null, array $tags = []): array
     {
         $source = $this->resolveSource($sourceId);
         $hookPoint = $source->getPoint($point);
@@ -92,7 +92,7 @@ final class HookRegistry implements HookRegistryInterface
             throw new HookTypeMismatchException($sourceId, $point, $hookPoint->type, HookType::Collect);
         }
 
-        $handlers = $source->getHandlers($point);
+        $handlers = $source->getHandlers($point, $tags);
         $results = [];
 
         foreach ($handlers as $handler) {
