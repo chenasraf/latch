@@ -1,0 +1,10 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.php"
+      run: vendor/bin/phpstan analyse --no-progress
+    fix:
+      glob: "*.php"
+      run: vendor/bin/pint {staged_files}
+      stage_fixed: true
